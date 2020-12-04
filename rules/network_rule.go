@@ -21,11 +21,11 @@ var ErrTooWideRule = errors.New("the rule is too wide, add domain, client or cta
 
 var (
 	reEscapedOptionsDelimiter = regexp.MustCompile(regexp.QuoteMeta("\\$"))
-	reRegexpBrackets1         = regexp.MustCompile("([^\\\\])\\(.*[^\\\\]\\)")
-	reRegexpBrackets2         = regexp.MustCompile("([^\\\\])\\{.*[^\\\\]\\}")
-	reRegexpBrackets3         = regexp.MustCompile("([^\\\\])\\[.*[^\\\\]\\]")
-	reRegexpEscapedCharacters = regexp.MustCompile("([^\\\\])\\[a-zA-Z]")
-	reRegexpSpecialCharacters = regexp.MustCompile("[\\\\^$*+?.()|[\\]{}]")
+	reRegexpBrackets1         = regexp.MustCompile(`([^\\])\(.*[^\\]\)`)
+	reRegexpBrackets2         = regexp.MustCompile(`([^\\])\{.*[^\\]\}`)
+	reRegexpBrackets3         = regexp.MustCompile(`([^\\])\[.*[^\\]\]`)
+	reRegexpEscapedCharacters = regexp.MustCompile(`([^\\])\[a-zA-Z]`)
+	reRegexpSpecialCharacters = regexp.MustCompile(`[\\^$*+?.()|[\]{}]`)
 )
 
 // NetworkRuleOption is the enumeration of various rule options
@@ -96,6 +96,34 @@ func (o NetworkRuleOption) Count() int {
 	return count
 }
 
+// RCode is a semantic alias for int when used as a DNS response code RCODE.
+type RCode = int
+
+// RR is a semantic alias for uint16 when used as a DNS resource record (RR)
+// type.
+type RR = uint16
+
+// RRValue is the value of a resource record.  If the coresponding RR is either
+// dns.TypeA or dns.TypeAAAA, the underlying type of RRValue is net.IP.  If the
+// RR is dns.TypeTXT, the underlying type of Value is string.  Otherwise,
+// currently, it is nil.  New types may be added in the future.
+type RRValue = interface{}
+
+// DNSRewrite is a DNS rewrite ($dnsrewrite) rule.
+type DNSRewrite struct {
+	// RCode is the new DNS RCODE.
+	RCode RCode
+	// RR is the new DNS resource record (RR) type.  It is only non-zero if
+	// RCode is dns.RCodeSuccess.
+	RR RR
+	// Value is the value for the record.  See the RRValue documentation for
+	// more details.
+	Value RRValue
+	// NewCNAME is the new CNAME.  If set, clients must ignore other fields,
+	// resolve the CNAME, and set the new A and AAAA records accordingly.
+	NewCNAME string
+}
+
 // NetworkRule is a basic filtering rule
 // https://kb.adguard.com/en/general/how-to-create-your-own-ad-filters#basic-rules
 type NetworkRule struct {
@@ -104,15 +132,18 @@ type NetworkRule struct {
 	FilterListID int    // Filter list identifier
 	Shortcut     string // the longest substring of the rule pattern with no special characters
 
+	// DNSRewrite is the DNS rewrite rule, if any.
+	DNSRewrite *DNSRewrite
+
 	permittedDomains  []string // a list of permitted domains from the $domain modifier
 	restrictedDomains []string // a list of restricted domains from the $domain modifier
 
 	// permittedDNSTypes is the list of permitted DNS record type names from
 	// the $dnstype modifier.
-	permittedDNSTypes []uint16
-	// restrictedDNSTypes is the lists of restricted DNS record type names
+	permittedDNSTypes []RR
+	// restrictedDNSTypes is the list of restricted DNS record type names
 	// from the $dnstype modifier.
-	restrictedDNSTypes []uint16
+	restrictedDNSTypes []RR
 
 	// https://github.com/AdguardTeam/AdGuardHome/issues/1081#issuecomment-575142737
 	permittedClientTags  []string // a sorted list of permitted client tags from the $ctag modifier
@@ -139,7 +170,6 @@ type NetworkRule struct {
 func NewNetworkRule(ruleText string, filterListID int) (*NetworkRule, error) {
 	// split rule into pattern and options
 	pattern, options, whitelist, err := parseRuleText(ruleText)
-
 	if err != nil {
 		return nil, err
 	}
@@ -257,11 +287,8 @@ func (f *NetworkRule) IsHostLevelNetworkRule() bool {
 	}
 
 	if f.enabledOptions != 0 {
-		if ((f.enabledOptions & OptionHostLevelRulesOnly) | (f.enabledOptions ^ OptionHostLevelRulesOnly)) == OptionHostLevelRulesOnly {
-			return true
-		}
-
-		return false
+		return ((f.enabledOptions & OptionHostLevelRulesOnly) |
+			(f.enabledOptions ^ OptionHostLevelRulesOnly)) == OptionHostLevelRulesOnly
 	}
 
 	return true
@@ -337,6 +364,9 @@ func (f *NetworkRule) IsHigherPriority(r *NetworkRule) bool {
 	if len(f.permittedDNSTypes) != 0 || len(f.restrictedDNSTypes) != 0 {
 		count++
 	}
+	if f.DNSRewrite != nil {
+		count++
+	}
 	if len(f.permittedClientTags) != 0 || len(f.restrictedClientTags) != 0 {
 		count++
 	}
@@ -349,6 +379,9 @@ func (f *NetworkRule) IsHigherPriority(r *NetworkRule) bool {
 		rCount++
 	}
 	if len(r.permittedDNSTypes) != 0 || len(r.restrictedDNSTypes) != 0 {
+		rCount++
+	}
+	if r.DNSRewrite != nil {
 		rCount++
 	}
 	if len(r.permittedClientTags) != 0 || len(r.restrictedClientTags) != 0 {
@@ -492,7 +525,7 @@ func (f *NetworkRule) shouldMatchHostname(r *Request) bool {
 
 // matchShortcut simply checks if shortcut is a substring of the URL
 func (f *NetworkRule) matchShortcut(r *Request) bool {
-	return strings.Index(r.URLLowerCase, f.Shortcut) != -1
+	return strings.Contains(r.URLLowerCase, f.Shortcut)
 }
 
 // matchDomain checks if the specified filtering rule is allowed on this domain
@@ -586,7 +619,7 @@ func (f *NetworkRule) matchClientTags(sortedTags []string) bool {
 // matchClient returns TRUE if the rule matches with the specified client
 // name -- client name (if any)
 // ip -- client ip (if any)
-func (f *NetworkRule) matchClient(name string, ip string) bool {
+func (f *NetworkRule) matchClient(name, ip string) bool {
 	if f.restrictedClients.Len() == 0 && f.permittedClients.Len() == 0 {
 		return true // the rule doesn't contain $client modifier
 	}
@@ -692,7 +725,7 @@ func (f *NetworkRule) loadOptions(options string) error {
 
 // loadOption loads specified option with its value (optional)
 // nolint:gocyclo
-func (f *NetworkRule) loadOption(name string, value string) error {
+func (f *NetworkRule) loadOption(name, value string) error {
 	switch name {
 	// General options
 	case "third-party", "~first-party":
@@ -712,6 +745,12 @@ func (f *NetworkRule) loadOption(name string, value string) error {
 		permitted, restricted, err := loadDNSTypes(value)
 		f.permittedDNSTypes = permitted
 		f.restrictedDNSTypes = restricted
+
+		return err
+	// $dnsrewrite, the DNS request rewrite filter.
+	case "dnsrewrite":
+		rewrite, err := loadDNSRewrite(value)
+		f.DNSRewrite = rewrite
 
 		return err
 	// $domain -- limits the rule for selected domains
@@ -896,7 +935,7 @@ func findRegexpShortcut(pattern string) string {
 	// strip backslashes
 	pattern = pattern[1 : len(pattern)-1]
 
-	if strings.Index(pattern, "?") != -1 {
+	if strings.Contains(pattern, "?") {
 		// Do not mess with complex expressions which use lookahead
 		// And with those using ? special character: https://github.com/AdguardTeam/AdguardBrowserExtension/issues/978
 		return ""
@@ -932,7 +971,7 @@ func findRegexpShortcut(pattern string) string {
 // pattern -- a basic rule pattern (which can be easily converted into a regex)
 // options -- a string with all rule options
 // whitelist -- indicates if rule is "whitelist" (e.g. it should unblock requests, not block them)
-func parseRuleText(ruleText string) (pattern string, options string, whitelist bool, err error) {
+func parseRuleText(ruleText string) (pattern, options string, whitelist bool, err error) {
 	startIndex := 0
 	if strings.HasPrefix(ruleText, maskWhiteList) {
 		whitelist = true

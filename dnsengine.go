@@ -21,6 +21,10 @@ type DNSResult struct {
 	NetworkRule *rules.NetworkRule // a network rule or nil
 	HostRulesV4 []*rules.HostRule  // host rules for IPv4 or nil
 	HostRulesV6 []*rules.HostRule  // host rules for IPv6 or nil
+
+	// DNSRewriteNetworkRules are the DNS rewrite rules set with $dnsrewrite
+	// modifiers.
+	DNSRewriteNetworkRules []*rules.NetworkRule
 }
 
 // DNSRequest represents a DNS query with associated metadata.
@@ -35,7 +39,7 @@ type DNSRequest struct {
 	// DNSType is the type of the resource record (RR) of a DNS request, for
 	// example "A" or "AAAA".  See package github.com/miekg/dns for all
 	// acceptable constants.
-	DNSType uint16
+	DNSType rules.RR
 }
 
 // NewDNSEngine parses the specified filter lists and returns a DNSEngine built from them.
@@ -63,9 +67,9 @@ func NewDNSEngine(s *filterlist.RuleStorage) *DNSEngine {
 
 	networkEngine := &NetworkEngine{
 		ruleStorage:          s,
-		domainsLookupTable:   make(map[uint32][]int64, 0),
+		domainsLookupTable:   make(map[uint32][]int64),
 		shortcutsLookupTable: make(map[uint32][]int64, networkRulesCount),
-		shortcutsHistogram:   make(map[uint32]int, 0),
+		shortcutsHistogram:   make(map[uint32]int),
 	}
 
 	// Go through all rules in the storage and add them to the lookup tables
@@ -116,6 +120,11 @@ func (d *DNSEngine) MatchRequest(dReq DNSRequest) (DNSResult, bool) {
 	r.ClientName = dReq.ClientName
 	r.DNSType = dReq.DNSType
 
+	if dnsr := d.networkEngine.matchDNSRewrites(r); len(dnsr) > 0 {
+		// DNS rewrite rules have a higher priority.
+		return DNSResult{DNSRewriteNetworkRules: dnsr}, true
+	}
+
 	networkRule, ok := d.networkEngine.Match(r)
 	if ok {
 		// Network rules always have higher priority
@@ -164,7 +173,7 @@ func (d *DNSEngine) matchLookupTable(hostname string) ([]rules.Rule, bool) {
 func (d *DNSEngine) addRule(hostRule *rules.HostRule, storageIdx int64) {
 	for _, hostname := range hostRule.Hostnames {
 		hash := fastHash(hostname)
-		rulesIndexes, _ := d.lookupTable[hash]
+		rulesIndexes := d.lookupTable[hash]
 		d.lookupTable[hash] = append(rulesIndexes, storageIdx)
 	}
 

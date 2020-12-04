@@ -3,6 +3,7 @@ package rules
 import (
 	"errors"
 	"fmt"
+	"net"
 	"sort"
 	"strings"
 
@@ -20,11 +21,9 @@ func (e *RuleSyntaxError) Error() string {
 	return fmt.Sprintf("syntax error: %s, rule: %s", e.msg, e.ruleText)
 }
 
-var (
-	// ErrUnsupportedRule signals that this might be a valid rule type,
-	// but it is not yet supported by this library
-	ErrUnsupportedRule = errors.New("this type of rules is unsupported")
-)
+// ErrUnsupportedRule signals that this might be a valid rule type,
+// but it is not yet supported by this library
+var ErrUnsupportedRule = errors.New("this type of rules is unsupported")
 
 // Rule is a base interface for all filtering rules
 type Rule interface {
@@ -87,7 +86,7 @@ func isComment(line string) bool {
 // loadDomains loads $domain modifier or cosmetic rules domains
 // domains is the list of domains
 // sep is the separator character. for network rules it is '|', for cosmetic it is ','.
-func loadDomains(domains string, sep string) (permittedDomains []string, restrictedDomains []string, err error) {
+func loadDomains(domains, sep string) (permittedDomains, restrictedDomains []string, err error) {
 	if domains == "" {
 		err = errors.New("no domains specified")
 		return
@@ -117,41 +116,184 @@ func loadDomains(domains string, sep string) (permittedDomains []string, restric
 	return
 }
 
+// strToRR converts s to a DNS resource record (RR) type.  s may be in any
+// letter case.
+func strToRR(s string) (rr RR, err error) {
+	// TypeNone and TypeReserved are special cases in package dns.
+	if strings.EqualFold(s, "none") || strings.EqualFold(s, "reserved") {
+		return 0, errors.New("dns rr type is none or reserved")
+	}
+
+	rr, ok := dns.StringToType[strings.ToUpper(s)]
+	if !ok {
+		return 0, fmt.Errorf("dns rr type %q is invalid", s)
+	}
+
+	return rr, nil
+}
+
 // loadDNSTypes loads the $dnstype modifier.  types is the list of types.
-func loadDNSTypes(types string) (permittedTypes []uint16, restrictedTypes []uint16, err error) {
+func loadDNSTypes(types string) (permittedTypes, restrictedTypes []RR, err error) {
 	if types == "" {
 		return nil, nil, errors.New("no dns record types specified")
 	}
 
 	list := strings.Split(types, "|")
-	for i, t := range list {
-		if len(t) == 0 {
+	for i, rrStr := range list {
+		if len(rrStr) == 0 {
 			return nil, nil, fmt.Errorf("dns record type %d is empty", i)
 		}
 
-		restricted := t[0] == '~'
+		restricted := rrStr[0] == '~'
 		if restricted {
-			t = t[1:]
+			rrStr = rrStr[1:]
 		}
 
-		// TypeNone and TypeReserved are special cases in package dns.
-		if strings.EqualFold(t, "none") || strings.EqualFold(t, "reserved") {
-			return nil, nil, fmt.Errorf("dns record type %d (%q) is none or reserved", i, t)
-		}
-
-		rtype, ok := dns.StringToType[strings.ToUpper(t)]
-		if !ok {
-			return nil, nil, fmt.Errorf("dns record type %d (%q) is invalid", i, t)
+		rr, err := strToRR(rrStr)
+		if err != nil {
+			return nil, nil, fmt.Errorf("type %d (%q): %w", i, rrStr, err)
 		}
 
 		if restricted {
-			restrictedTypes = append(restrictedTypes, rtype)
+			restrictedTypes = append(restrictedTypes, rr)
 		} else {
-			permittedTypes = append(permittedTypes, rtype)
+			permittedTypes = append(permittedTypes, rr)
 		}
 	}
 
 	return permittedTypes, restrictedTypes, nil
+}
+
+// loadDNSRewrite loads the $dnsrewrite modifier.
+func loadDNSRewrite(s string) (rewrite *DNSRewrite, err error) {
+	parts := strings.SplitN(s, ";", 3)
+	switch len(parts) {
+	case 1:
+		return loadDNSRewriteShort(s)
+	case 2:
+		return nil, errors.New("invalid dnsrewrite: expected zero or two delimiters")
+	case 3:
+		return loadDNSRewriteNormal(parts[0], parts[1], parts[2])
+	default:
+		// TODO(a.garipov): Use panic("unreachable") instead?
+		return nil, fmt.Errorf("SplitN returned %d parts", len(parts))
+	}
+}
+
+// allUppercaseASCII returns true if s is not empty and all characters in s are
+// uppercase ASCII letters.
+func allUppercaseASCII(s string) (ok bool) {
+	if s == "" {
+		return false
+	}
+
+	for _, r := range s {
+		if r < 'A' || r > 'Z' {
+			return false
+		}
+	}
+
+	return true
+}
+
+// loadDNSRewritesShort loads the shorthand version of the $dnsrewrite modifier.
+func loadDNSRewriteShort(s string) (rewrite *DNSRewrite, err error) {
+	if s == "" {
+		// Return an empty DNSRewrite, because an empty string most
+		// probalby means that this is a disabling allowlist case.
+		return &DNSRewrite{}, nil
+	} else if allUppercaseASCII(s) {
+		if s == "REFUSED" {
+			return &DNSRewrite{
+				RCode: dns.RcodeRefused,
+			}, nil
+		}
+
+		return nil, fmt.Errorf("unknown keyword: %q", s)
+	}
+
+	ip := net.ParseIP(s)
+	if ip != nil {
+		if ip4 := ip.To4(); ip4 != nil {
+			return &DNSRewrite{
+				RCode: dns.RcodeSuccess,
+				RR:    dns.TypeA,
+				Value: ip,
+			}, nil
+		}
+
+		return &DNSRewrite{
+			RCode: dns.RcodeSuccess,
+			RR:    dns.TypeAAAA,
+			Value: ip,
+		}, nil
+	}
+
+	return &DNSRewrite{
+		NewCNAME: s,
+	}, nil
+}
+
+// loadDNSRewritesNormal loads the normal version for of the $dnsrewrite
+// modifier.
+func loadDNSRewriteNormal(rcodeStr, rrStr, valStr string) (rewrite *DNSRewrite, err error) {
+	rcode, ok := dns.StringToRcode[strings.ToUpper(rcodeStr)]
+	if !ok {
+		return nil, fmt.Errorf("unknown rcode: %q", rcodeStr)
+	}
+
+	if rcode != dns.RcodeSuccess {
+		return &DNSRewrite{
+			RCode: rcode,
+		}, nil
+	}
+
+	rr, err := strToRR(rrStr)
+	if err != nil {
+		return nil, err
+	}
+
+	switch rr {
+	case dns.TypeA:
+		ip := net.ParseIP(valStr)
+		if ip4 := ip.To4(); ip4 == nil {
+			return nil, fmt.Errorf("invalid ipv4: %q", valStr)
+		}
+
+		return &DNSRewrite{
+			RCode: rcode,
+			RR:    rr,
+			Value: ip,
+		}, nil
+	case dns.TypeAAAA:
+		ip := net.ParseIP(valStr)
+		if ip == nil {
+			return nil, fmt.Errorf("invalid ipv6: %q", valStr)
+		} else if ip4 := ip.To4(); ip4 != nil {
+			return nil, fmt.Errorf("want ipv6, got ipv4: %q", valStr)
+		}
+
+		return &DNSRewrite{
+			RCode: rcode,
+			RR:    rr,
+			Value: ip,
+		}, nil
+	case dns.TypeCNAME:
+		return &DNSRewrite{
+			NewCNAME: valStr,
+		}, nil
+	case dns.TypeTXT:
+		return &DNSRewrite{
+			RCode: rcode,
+			RR:    rr,
+			Value: valStr,
+		}, nil
+	default:
+		return &DNSRewrite{
+			RCode: rcode,
+			RR:    rr,
+		}, nil
+	}
 }
 
 // isValidCTag - returns TRUE if ctag value format is correct: a-z0-9_
@@ -170,7 +312,7 @@ func isValidCTag(s string) bool {
 // value: string value of the $ctag modifier
 // sep: separator character; for network rules it is '|'
 // returns sorted arrays with permitted and restricted $ctag
-func loadCTags(value string, sep string) (permittedCTags []string, restrictedCTags []string, err error) {
+func loadCTags(value, sep string) (permittedCTags, restrictedCTags []string, err error) {
 	if value == "" {
 		err = errors.New("value is empty")
 		return
@@ -234,7 +376,7 @@ func loadCTags(value string, sep string) (permittedCTags []string, restrictedCTa
 // ~Mom|~Dad|"Kids"
 //
 // Returns sorted arrays of permitted and restricted clients
-func loadClients(value string, sep byte) (permittedClients *clients, restrictedClients *clients, err error) {
+func loadClients(value string, sep byte) (permittedClients, restrictedClients *clients, err error) {
 	if value == "" {
 		err = errors.New("value is empty")
 		return
