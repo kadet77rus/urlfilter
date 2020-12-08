@@ -99,9 +99,9 @@ func (o NetworkRuleOption) Count() int {
 // RCode is a semantic alias for int when used as a DNS response code RCODE.
 type RCode = int
 
-// RR is a semantic alias for uint16 when used as a DNS resource record (RR)
+// RRType is a semantic alias for uint16 when used as a DNS resource record (RR)
 // type.
-type RR = uint16
+type RRType = uint16
 
 // RRValue is the value of a resource record.  If the coresponding RR is either
 // dns.TypeA or dns.TypeAAAA, the underlying type of RRValue is net.IP.  If the
@@ -113,9 +113,9 @@ type RRValue = interface{}
 type DNSRewrite struct {
 	// RCode is the new DNS RCODE.
 	RCode RCode
-	// RR is the new DNS resource record (RR) type.  It is only non-zero if
-	// RCode is dns.RCodeSuccess.
-	RR RR
+	// RRType is the new DNS resource record (RR) type.  It is only non-zero
+	// if RCode is dns.RCodeSuccess.
+	RRType RRType
 	// Value is the value for the record.  See the RRValue documentation for
 	// more details.
 	Value RRValue
@@ -140,10 +140,10 @@ type NetworkRule struct {
 
 	// permittedDNSTypes is the list of permitted DNS record type names from
 	// the $dnstype modifier.
-	permittedDNSTypes []RR
+	permittedDNSTypes []RRType
 	// restrictedDNSTypes is the list of restricted DNS record type names
 	// from the $dnstype modifier.
-	restrictedDNSTypes []RR
+	restrictedDNSTypes []RRType
 
 	// https://github.com/AdguardTeam/AdGuardHome/issues/1081#issuecomment-575142737
 	permittedClientTags  []string // a sorted list of permitted client tags from the $ctag modifier
@@ -364,9 +364,6 @@ func (f *NetworkRule) IsHigherPriority(r *NetworkRule) bool {
 	if len(f.permittedDNSTypes) != 0 || len(f.restrictedDNSTypes) != 0 {
 		count++
 	}
-	if f.DNSRewrite != nil {
-		count++
-	}
 	if len(f.permittedClientTags) != 0 || len(f.restrictedClientTags) != 0 {
 		count++
 	}
@@ -379,9 +376,6 @@ func (f *NetworkRule) IsHigherPriority(r *NetworkRule) bool {
 		rCount++
 	}
 	if len(r.permittedDNSTypes) != 0 || len(r.restrictedDNSTypes) != 0 {
-		rCount++
-	}
-	if r.DNSRewrite != nil {
 		rCount++
 	}
 	if len(r.permittedClientTags) != 0 || len(r.restrictedClientTags) != 0 {

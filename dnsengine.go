@@ -39,7 +39,7 @@ type DNSRequest struct {
 	// DNSType is the type of the resource record (RR) of a DNS request, for
 	// example "A" or "AAAA".  See package github.com/miekg/dns for all
 	// acceptable constants.
-	DNSType rules.RR
+	DNSType rules.RRType
 }
 
 // NewDNSEngine parses the specified filter lists and returns a DNSEngine built from them.
@@ -120,15 +120,27 @@ func (d *DNSEngine) MatchRequest(dReq DNSRequest) (DNSResult, bool) {
 	r.ClientName = dReq.ClientName
 	r.DNSType = dReq.DNSType
 
-	if dnsr := d.networkEngine.matchDNSRewrites(r); len(dnsr) > 0 {
-		// DNS rewrite rules have a higher priority.
-		return DNSResult{DNSRewriteNetworkRules: dnsr}, true
+	networkRules := d.networkEngine.MatchAll(r)
+
+	var dnsRewriteRules []*rules.NetworkRule
+	for _, nr := range networkRules {
+		if nr.DNSRewrite != nil {
+			dnsRewriteRules = append(dnsRewriteRules, nr)
+		}
 	}
 
-	networkRule, ok := d.networkEngine.Match(r)
-	if ok {
+	if len(dnsRewriteRules) > 0 {
+		// DNS rewrite rules have a higher priority.
+		return DNSResult{
+			DNSRewriteNetworkRules: dnsRewriteRules,
+		}, true
+	}
+
+	result := rules.NewMatchingResult(networkRules, nil)
+	resultRule := result.GetBasicResult()
+	if resultRule != nil {
 		// Network rules always have higher priority
-		return DNSResult{NetworkRule: networkRule}, true
+		return DNSResult{NetworkRule: resultRule}, true
 	}
 
 	rr, ok := d.matchLookupTable(dReq.Hostname)

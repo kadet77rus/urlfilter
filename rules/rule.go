@@ -118,7 +118,7 @@ func loadDomains(domains, sep string) (permittedDomains, restrictedDomains []str
 
 // strToRR converts s to a DNS resource record (RR) type.  s may be in any
 // letter case.
-func strToRR(s string) (rr RR, err error) {
+func strToRR(s string) (rr RRType, err error) {
 	// TypeNone and TypeReserved are special cases in package dns.
 	if strings.EqualFold(s, "none") || strings.EqualFold(s, "reserved") {
 		return 0, errors.New("dns rr type is none or reserved")
@@ -133,7 +133,7 @@ func strToRR(s string) (rr RR, err error) {
 }
 
 // loadDNSTypes loads the $dnstype modifier.  types is the list of types.
-func loadDNSTypes(types string) (permittedTypes, restrictedTypes []RR, err error) {
+func loadDNSTypes(types string) (permittedTypes, restrictedTypes []RRType, err error) {
 	if types == "" {
 		return nil, nil, errors.New("no dns record types specified")
 	}
@@ -216,16 +216,16 @@ func loadDNSRewriteShort(s string) (rewrite *DNSRewrite, err error) {
 	if ip != nil {
 		if ip4 := ip.To4(); ip4 != nil {
 			return &DNSRewrite{
-				RCode: dns.RcodeSuccess,
-				RR:    dns.TypeA,
-				Value: ip,
+				RCode:  dns.RcodeSuccess,
+				RRType: dns.TypeA,
+				Value:  ip,
 			}, nil
 		}
 
 		return &DNSRewrite{
-			RCode: dns.RcodeSuccess,
-			RR:    dns.TypeAAAA,
-			Value: ip,
+			RCode:  dns.RcodeSuccess,
+			RRType: dns.TypeAAAA,
+			Value:  ip,
 		}, nil
 	}
 
@@ -261,9 +261,9 @@ func loadDNSRewriteNormal(rcodeStr, rrStr, valStr string) (rewrite *DNSRewrite, 
 		}
 
 		return &DNSRewrite{
-			RCode: rcode,
-			RR:    rr,
-			Value: ip,
+			RCode:  rcode,
+			RRType: rr,
+			Value:  ip,
 		}, nil
 	case dns.TypeAAAA:
 		ip := net.ParseIP(valStr)
@@ -274,9 +274,9 @@ func loadDNSRewriteNormal(rcodeStr, rrStr, valStr string) (rewrite *DNSRewrite, 
 		}
 
 		return &DNSRewrite{
-			RCode: rcode,
-			RR:    rr,
-			Value: ip,
+			RCode:  rcode,
+			RRType: rr,
+			Value:  ip,
 		}, nil
 	case dns.TypeCNAME:
 		return &DNSRewrite{
@@ -284,14 +284,14 @@ func loadDNSRewriteNormal(rcodeStr, rrStr, valStr string) (rewrite *DNSRewrite, 
 		}, nil
 	case dns.TypeTXT:
 		return &DNSRewrite{
-			RCode: rcode,
-			RR:    rr,
-			Value: valStr,
+			RCode:  rcode,
+			RRType: rr,
+			Value:  valStr,
 		}, nil
 	default:
 		return &DNSRewrite{
-			RCode: rcode,
-			RR:    rr,
+			RCode:  rcode,
+			RRType: rr,
 		}, nil
 	}
 }

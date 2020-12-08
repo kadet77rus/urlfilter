@@ -137,16 +137,6 @@ func (n *NetworkEngine) matchDomainsLookupTable(r *rules.Request) []*rules.Netwo
 	return result
 }
 
-func (n *NetworkEngine) matchDNSRewrites(r *rules.Request) (rules []*rules.NetworkRule) {
-	for _, nr := range n.MatchAll(r) {
-		if nr.DNSRewrite != nil {
-			rules = append(rules, nr)
-		}
-	}
-
-	return rules
-}
-
 // addRule adds rule to the network engine
 func (n *NetworkEngine) addRule(f *rules.NetworkRule, storageIdx int64) {
 	if !n.addRuleToShortcutsTable(f, storageIdx) {

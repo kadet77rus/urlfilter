@@ -62,7 +62,7 @@ func TestDNSEngine_MatchRequest_dnsRewrite(t *testing.T) {
 		if assert.Equal(t, 1, len(res.DNSRewriteNetworkRules)) {
 			nr := res.DNSRewriteNetworkRules[0]
 			assert.Equal(t, dns.RcodeSuccess, nr.DNSRewrite.RCode)
-			assert.Equal(t, dns.TypeA, nr.DNSRewrite.RR)
+			assert.Equal(t, dns.TypeA, nr.DNSRewrite.RRType)
 			assert.Equal(t, ipv4p1, nr.DNSRewrite.Value)
 		}
 	})
@@ -73,12 +73,12 @@ func TestDNSEngine_MatchRequest_dnsRewrite(t *testing.T) {
 		if assert.Equal(t, 2, len(res.DNSRewriteNetworkRules)) {
 			nr := res.DNSRewriteNetworkRules[0]
 			assert.Equal(t, dns.RcodeSuccess, nr.DNSRewrite.RCode)
-			assert.Equal(t, dns.TypeA, nr.DNSRewrite.RR)
+			assert.Equal(t, dns.TypeA, nr.DNSRewrite.RRType)
 			assert.Equal(t, ipv4p1, nr.DNSRewrite.Value)
 
 			nr = res.DNSRewriteNetworkRules[1]
 			assert.Equal(t, dns.RcodeSuccess, nr.DNSRewrite.RCode)
-			assert.Equal(t, dns.TypeA, nr.DNSRewrite.RR)
+			assert.Equal(t, dns.TypeA, nr.DNSRewrite.RRType)
 			assert.Equal(t, ipv4p2, nr.DNSRewrite.Value)
 		}
 	})
@@ -89,7 +89,7 @@ func TestDNSEngine_MatchRequest_dnsRewrite(t *testing.T) {
 		if assert.Equal(t, 1, len(res.DNSRewriteNetworkRules)) {
 			nr := res.DNSRewriteNetworkRules[0]
 			assert.Equal(t, dns.RcodeSuccess, nr.DNSRewrite.RCode)
-			assert.Equal(t, dns.TypeA, nr.DNSRewrite.RR)
+			assert.Equal(t, dns.TypeA, nr.DNSRewrite.RRType)
 			assert.Equal(t, ipv4p1, nr.DNSRewrite.Value)
 		}
 	})
@@ -100,12 +100,12 @@ func TestDNSEngine_MatchRequest_dnsRewrite(t *testing.T) {
 		if assert.Equal(t, 2, len(res.DNSRewriteNetworkRules)) {
 			nr := res.DNSRewriteNetworkRules[0]
 			assert.Equal(t, dns.RcodeSuccess, nr.DNSRewrite.RCode)
-			assert.Equal(t, dns.TypeA, nr.DNSRewrite.RR)
+			assert.Equal(t, dns.TypeA, nr.DNSRewrite.RRType)
 			assert.Equal(t, ipv4p1, nr.DNSRewrite.Value)
 
 			nr = res.DNSRewriteNetworkRules[1]
 			assert.Equal(t, dns.RcodeSuccess, nr.DNSRewrite.RCode)
-			assert.Equal(t, dns.TypeA, nr.DNSRewrite.RR)
+			assert.Equal(t, dns.TypeA, nr.DNSRewrite.RRType)
 			assert.Equal(t, ipv4p2, nr.DNSRewrite.Value)
 		}
 	})
@@ -116,7 +116,7 @@ func TestDNSEngine_MatchRequest_dnsRewrite(t *testing.T) {
 		if assert.Equal(t, 1, len(res.DNSRewriteNetworkRules)) {
 			nr := res.DNSRewriteNetworkRules[0]
 			assert.Equal(t, dns.RcodeSuccess, nr.DNSRewrite.RCode)
-			assert.Equal(t, dns.TypeAAAA, nr.DNSRewrite.RR)
+			assert.Equal(t, dns.TypeAAAA, nr.DNSRewrite.RRType)
 			assert.Equal(t, ipv6p1, nr.DNSRewrite.Value)
 		}
 	})
@@ -127,12 +127,12 @@ func TestDNSEngine_MatchRequest_dnsRewrite(t *testing.T) {
 		if assert.Equal(t, 2, len(res.DNSRewriteNetworkRules)) {
 			nr := res.DNSRewriteNetworkRules[0]
 			assert.Equal(t, dns.RcodeSuccess, nr.DNSRewrite.RCode)
-			assert.Equal(t, dns.TypeAAAA, nr.DNSRewrite.RR)
+			assert.Equal(t, dns.TypeAAAA, nr.DNSRewrite.RRType)
 			assert.Equal(t, ipv6p1, nr.DNSRewrite.Value)
 
 			nr = res.DNSRewriteNetworkRules[1]
 			assert.Equal(t, dns.RcodeSuccess, nr.DNSRewrite.RCode)
-			assert.Equal(t, dns.TypeAAAA, nr.DNSRewrite.RR)
+			assert.Equal(t, dns.TypeAAAA, nr.DNSRewrite.RRType)
 			assert.Equal(t, ipv6p2, nr.DNSRewrite.Value)
 		}
 	})
@@ -143,7 +143,7 @@ func TestDNSEngine_MatchRequest_dnsRewrite(t *testing.T) {
 		if assert.Equal(t, 1, len(res.DNSRewriteNetworkRules)) {
 			nr := res.DNSRewriteNetworkRules[0]
 			assert.Equal(t, dns.RcodeSuccess, nr.DNSRewrite.RCode)
-			assert.Equal(t, dns.TypeAAAA, nr.DNSRewrite.RR)
+			assert.Equal(t, dns.TypeAAAA, nr.DNSRewrite.RRType)
 			assert.Equal(t, ipv6p1, nr.DNSRewrite.Value)
 		}
 	})
@@ -154,12 +154,12 @@ func TestDNSEngine_MatchRequest_dnsRewrite(t *testing.T) {
 		if assert.Equal(t, 2, len(res.DNSRewriteNetworkRules)) {
 			nr := res.DNSRewriteNetworkRules[0]
 			assert.Equal(t, dns.RcodeSuccess, nr.DNSRewrite.RCode)
-			assert.Equal(t, dns.TypeAAAA, nr.DNSRewrite.RR)
+			assert.Equal(t, dns.TypeAAAA, nr.DNSRewrite.RRType)
 			assert.Equal(t, ipv6p1, nr.DNSRewrite.Value)
 
 			nr = res.DNSRewriteNetworkRules[1]
 			assert.Equal(t, dns.RcodeSuccess, nr.DNSRewrite.RCode)
-			assert.Equal(t, dns.TypeAAAA, nr.DNSRewrite.RR)
+			assert.Equal(t, dns.TypeAAAA, nr.DNSRewrite.RRType)
 			assert.Equal(t, ipv6p2, nr.DNSRewrite.Value)
 		}
 	})
@@ -188,7 +188,7 @@ func TestDNSEngine_MatchRequest_dnsRewrite(t *testing.T) {
 		if assert.Equal(t, 1, len(res.DNSRewriteNetworkRules)) {
 			nr := res.DNSRewriteNetworkRules[0]
 			assert.Equal(t, dns.RcodeSuccess, nr.DNSRewrite.RCode)
-			assert.Equal(t, dns.TypeTXT, nr.DNSRewrite.RR)
+			assert.Equal(t, dns.TypeTXT, nr.DNSRewrite.RRType)
 			assert.Equal(t, "new_txtcontent", nr.DNSRewrite.Value)
 		}
 	})
@@ -226,7 +226,7 @@ func TestDNSEngine_MatchRequest_dnsRewrite(t *testing.T) {
 		if assert.Equal(t, 1, len(res.DNSRewriteNetworkRules)) {
 			nr := res.DNSRewriteNetworkRules[0]
 			assert.Equal(t, dns.RcodeSuccess, nr.DNSRewrite.RCode)
-			assert.Equal(t, dns.TypeA, nr.DNSRewrite.RR)
+			assert.Equal(t, dns.TypeA, nr.DNSRewrite.RRType)
 			assert.Equal(t, ipv4p1, nr.DNSRewrite.Value)
 		}
 	})
@@ -247,7 +247,7 @@ func TestDNSEngine_MatchRequest_dnsRewrite(t *testing.T) {
 		if assert.NotNil(t, allowListCase) {
 			dr := allowListCase.DNSRewrite
 			assert.Equal(t, dns.RcodeSuccess, dr.RCode)
-			assert.Equal(t, dns.TypeA, dr.RR)
+			assert.Equal(t, dns.TypeA, dr.RRType)
 			assert.Equal(t, ipv4p1, dr.Value)
 		}
 	})
