@@ -40,7 +40,7 @@ func TestBenchDNSEngine(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot create rule storage: %s", err)
 	}
-	defer ruleStorage.Close()
+	defer func() { assert.Nil(t, ruleStorage.Close()) }()
 
 	testRequests := loadRequests(t)
 	assert.True(t, len(testRequests) > 0)

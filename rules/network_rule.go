@@ -96,34 +96,6 @@ func (o NetworkRuleOption) Count() int {
 	return count
 }
 
-// RCode is a semantic alias for int when used as a DNS response code RCODE.
-type RCode = int
-
-// RRType is a semantic alias for uint16 when used as a DNS resource record (RR)
-// type.
-type RRType = uint16
-
-// RRValue is the value of a resource record.  If the coresponding RR is either
-// dns.TypeA or dns.TypeAAAA, the underlying type of RRValue is net.IP.  If the
-// RR is dns.TypeTXT, the underlying type of Value is string.  Otherwise,
-// currently, it is nil.  New types may be added in the future.
-type RRValue = interface{}
-
-// DNSRewrite is a DNS rewrite ($dnsrewrite) rule.
-type DNSRewrite struct {
-	// RCode is the new DNS RCODE.
-	RCode RCode
-	// RRType is the new DNS resource record (RR) type.  It is only non-zero
-	// if RCode is dns.RCodeSuccess.
-	RRType RRType
-	// Value is the value for the record.  See the RRValue documentation for
-	// more details.
-	Value RRValue
-	// NewCNAME is the new CNAME.  If set, clients must ignore other fields,
-	// resolve the CNAME, and set the new A and AAAA records accordingly.
-	NewCNAME string
-}
-
 // NetworkRule is a basic filtering rule
 // https://kb.adguard.com/en/general/how-to-create-your-own-ad-filters#basic-rules
 type NetworkRule struct {

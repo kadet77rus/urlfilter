@@ -22,9 +22,23 @@ type DNSResult struct {
 	HostRulesV4 []*rules.HostRule  // host rules for IPv4 or nil
 	HostRulesV6 []*rules.HostRule  // host rules for IPv6 or nil
 
-	// DNSRewriteNetworkRules are the DNS rewrite rules set with $dnsrewrite
-	// modifiers.
-	DNSRewriteNetworkRules []*rules.NetworkRule
+	// networkRules are all matched network rules.
+	networkRules []*rules.NetworkRule
+}
+
+// DNSRewrites returns all $dnsrewrite network rules.
+func (res *DNSResult) DNSRewrites() (rules []*rules.NetworkRule) {
+	if res == nil {
+		return nil
+	}
+
+	for _, nr := range res.networkRules {
+		if nr.DNSRewrite != nil {
+			rules = append(rules, nr)
+		}
+	}
+
+	return rules
 }
 
 // DNSRequest represents a DNS query with associated metadata.
@@ -109,7 +123,7 @@ func (d *DNSEngine) Match(hostname string) (DNSResult, bool) {
 // For instance:
 // 192.168.0.1 example.local
 // 2000::1 example.local
-func (d *DNSEngine) MatchRequest(dReq DNSRequest) (DNSResult, bool) {
+func (d *DNSEngine) MatchRequest(dReq DNSRequest) (res DNSResult, matched bool) {
 	if dReq.Hostname == "" {
 		return DNSResult{}, false
 	}
@@ -120,45 +134,34 @@ func (d *DNSEngine) MatchRequest(dReq DNSRequest) (DNSResult, bool) {
 	r.ClientName = dReq.ClientName
 	r.DNSType = dReq.DNSType
 
-	networkRules := d.networkEngine.MatchAll(r)
+	res.networkRules = d.networkEngine.MatchAll(r)
 
-	var dnsRewriteRules []*rules.NetworkRule
-	for _, nr := range networkRules {
-		if nr.DNSRewrite != nil {
-			dnsRewriteRules = append(dnsRewriteRules, nr)
-		}
-	}
-
-	if len(dnsRewriteRules) > 0 {
-		// DNS rewrite rules have a higher priority.
-		return DNSResult{
-			DNSRewriteNetworkRules: dnsRewriteRules,
-		}, true
-	}
-
-	result := rules.NewMatchingResult(networkRules, nil)
+	result := rules.NewMatchingResult(res.networkRules, nil)
 	resultRule := result.GetBasicResult()
 	if resultRule != nil {
-		// Network rules always have higher priority
-		return DNSResult{NetworkRule: resultRule}, true
+		// Network rules always have higher priority.
+		res.NetworkRule = resultRule
+		return res, true
 	}
 
 	rr, ok := d.matchLookupTable(dReq.Hostname)
 	if !ok {
 		return DNSResult{}, false
 	}
-	res := DNSResult{}
+
 	for _, rule := range rr {
 		hostRule, ok := rule.(*rules.HostRule)
 		if !ok {
 			continue
 		}
+
 		if hostRule.IP.To4() != nil {
 			res.HostRulesV4 = append(res.HostRulesV4, hostRule)
 		} else {
 			res.HostRulesV6 = append(res.HostRulesV6, hostRule)
 		}
 	}
+
 	return res, true
 }
 

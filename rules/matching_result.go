@@ -72,7 +72,7 @@ type MatchingResult struct {
 // rules - a set of rules matching the request URL
 // sourceRules - a set of rules matching the referrer
 // nolint:gocyclo
-func NewMatchingResult(rules []*NetworkRule, sourceRules []*NetworkRule) MatchingResult {
+func NewMatchingResult(rules, sourceRules []*NetworkRule) MatchingResult {
 	rules = removeBadfilterRules(rules)
 	sourceRules = removeBadfilterRules(sourceRules)
 

@@ -82,7 +82,7 @@ func newClients(clientStrs ...string) *clients {
 }
 
 // containsAny - checks if "clients" contains host or ipStr
-func (c *clients) containsAny(host string, ipStr string) bool {
+func (c *clients) containsAny(host, ipStr string) bool {
 	if c == nil {
 		return false
 	}
