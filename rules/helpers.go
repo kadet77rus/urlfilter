@@ -27,7 +27,7 @@ func splitWithEscapeCharacter(str string, sep, escapeCharacter byte, preserveAll
 
 	var sb strings.Builder
 	escaped := false
-	for i := 0; i < len(str); i++ {
+	for i := range str {
 		c := str[i]
 
 		if c == escapeCharacter {

@@ -74,7 +74,10 @@ type MatchingResult struct {
 // nolint:gocyclo
 func NewMatchingResult(rules, sourceRules []*NetworkRule) MatchingResult {
 	rules = removeBadfilterRules(rules)
+	rules = removeDNSRewriteRules(rules)
+
 	sourceRules = removeBadfilterRules(sourceRules)
+	sourceRules = removeDNSRewriteRules(sourceRules)
 
 	result := MatchingResult{}
 
@@ -213,4 +216,14 @@ func removeBadfilterRules(rules []*NetworkRule) []*NetworkRule {
 	}
 
 	return rules
+}
+
+func removeDNSRewriteRules(rules []*NetworkRule) (filtered []*NetworkRule) {
+	for _, r := range rules {
+		if r.DNSRewrite == nil {
+			filtered = append(filtered, r)
+		}
+	}
+
+	return filtered
 }

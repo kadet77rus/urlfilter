@@ -116,16 +116,17 @@ func (d *DNSEngine) Match(hostname string) (DNSResult, bool) {
 	return d.MatchRequest(DNSRequest{Hostname: hostname, ClientIP: "0.0.0.0"})
 }
 
-// MatchRequest - matches the specified DNS request
+// MatchRequest matches the specified DNS request.  The return parameter
+// matched is true if the result has a basic network rule or some host
+// rules.
 //
-// It returns true and the list of rules found or false and nil.
-// The list of rules can be found when there're multiple host rules matching the same domain.
-// For instance:
-// 192.168.0.1 example.local
-// 2000::1 example.local
+// For compatibility reasons, it is also false when there are DNS
+// rewrite and other kinds of special network rules, so users who need
+// those will need to ignore the matched return parameter and instead
+// inspect the results of the corresponding DNSResult getters.
 func (d *DNSEngine) MatchRequest(dReq DNSRequest) (res DNSResult, matched bool) {
 	if dReq.Hostname == "" {
-		return DNSResult{}, false
+		return res, false
 	}
 
 	r := rules.NewRequestForHostname(dReq.Hostname)
@@ -146,7 +147,7 @@ func (d *DNSEngine) MatchRequest(dReq DNSRequest) (res DNSResult, matched bool) 
 
 	rr, ok := d.matchLookupTable(dReq.Hostname)
 	if !ok {
-		return DNSResult{}, false
+		return res, false
 	}
 
 	for _, rule := range rr {

@@ -55,7 +55,7 @@ func TestDNSEngine_MatchRequest_dnsRewrite(t *testing.T) {
 
 	t.Run("short_v4", func(t *testing.T) {
 		res, ok := dnsEngine.Match("short_v4")
-		assert.True(t, ok)
+		assert.False(t, ok)
 
 		dnsr := res.DNSRewrites()
 		if assert.Equal(t, 1, len(dnsr)) {
@@ -68,7 +68,7 @@ func TestDNSEngine_MatchRequest_dnsRewrite(t *testing.T) {
 
 	t.Run("short_v4_multiple", func(t *testing.T) {
 		res, ok := dnsEngine.Match("short_v4_multiple")
-		assert.True(t, ok)
+		assert.False(t, ok)
 
 		dnsr := res.DNSRewrites()
 		if assert.Equal(t, 2, len(dnsr)) {
@@ -86,7 +86,7 @@ func TestDNSEngine_MatchRequest_dnsRewrite(t *testing.T) {
 
 	t.Run("normal_v4", func(t *testing.T) {
 		res, ok := dnsEngine.Match("normal_v4")
-		assert.True(t, ok)
+		assert.False(t, ok)
 
 		dnsr := res.DNSRewrites()
 		if assert.Equal(t, 1, len(dnsr)) {
@@ -99,7 +99,7 @@ func TestDNSEngine_MatchRequest_dnsRewrite(t *testing.T) {
 
 	t.Run("normal_v4_multiple", func(t *testing.T) {
 		res, ok := dnsEngine.Match("normal_v4_multiple")
-		assert.True(t, ok)
+		assert.False(t, ok)
 
 		dnsr := res.DNSRewrites()
 		if assert.Equal(t, 2, len(dnsr)) {
@@ -117,7 +117,7 @@ func TestDNSEngine_MatchRequest_dnsRewrite(t *testing.T) {
 
 	t.Run("short_v6", func(t *testing.T) {
 		res, ok := dnsEngine.Match("short_v6")
-		assert.True(t, ok)
+		assert.False(t, ok)
 
 		dnsr := res.DNSRewrites()
 		if assert.Equal(t, 1, len(dnsr)) {
@@ -130,7 +130,7 @@ func TestDNSEngine_MatchRequest_dnsRewrite(t *testing.T) {
 
 	t.Run("short_v6_multiple", func(t *testing.T) {
 		res, ok := dnsEngine.Match("short_v6_multiple")
-		assert.True(t, ok)
+		assert.False(t, ok)
 
 		dnsr := res.DNSRewrites()
 		if assert.Equal(t, 2, len(dnsr)) {
@@ -148,7 +148,7 @@ func TestDNSEngine_MatchRequest_dnsRewrite(t *testing.T) {
 
 	t.Run("normal_v6", func(t *testing.T) {
 		res, ok := dnsEngine.Match("normal_v6")
-		assert.True(t, ok)
+		assert.False(t, ok)
 
 		dnsr := res.DNSRewrites()
 		if assert.Equal(t, 1, len(dnsr)) {
@@ -161,7 +161,7 @@ func TestDNSEngine_MatchRequest_dnsRewrite(t *testing.T) {
 
 	t.Run("normal_v6_multiple", func(t *testing.T) {
 		res, ok := dnsEngine.Match("normal_v6_multiple")
-		assert.True(t, ok)
+		assert.False(t, ok)
 
 		dnsr := res.DNSRewrites()
 		if assert.Equal(t, 2, len(dnsr)) {
@@ -179,7 +179,7 @@ func TestDNSEngine_MatchRequest_dnsRewrite(t *testing.T) {
 
 	t.Run("refused_host", func(t *testing.T) {
 		res, ok := dnsEngine.Match("refused_host")
-		assert.True(t, ok)
+		assert.False(t, ok)
 
 		dnsr := res.DNSRewrites()
 		if assert.Equal(t, 1, len(dnsr)) {
@@ -190,7 +190,7 @@ func TestDNSEngine_MatchRequest_dnsRewrite(t *testing.T) {
 
 	t.Run("new_cname", func(t *testing.T) {
 		res, ok := dnsEngine.Match("new_cname")
-		assert.True(t, ok)
+		assert.False(t, ok)
 
 		dnsr := res.DNSRewrites()
 		if assert.Equal(t, 1, len(dnsr)) {
@@ -201,7 +201,7 @@ func TestDNSEngine_MatchRequest_dnsRewrite(t *testing.T) {
 
 	t.Run("new_txt", func(t *testing.T) {
 		res, ok := dnsEngine.Match("new_txt")
-		assert.True(t, ok)
+		assert.False(t, ok)
 
 		dnsr := res.DNSRewrites()
 		if assert.Equal(t, 1, len(dnsr)) {
@@ -219,7 +219,7 @@ func TestDNSEngine_MatchRequest_dnsRewrite(t *testing.T) {
 		}
 
 		res, ok := dnsEngine.MatchRequest(r)
-		assert.True(t, ok)
+		assert.False(t, ok)
 
 		dnsr := res.DNSRewrites()
 		if assert.Equal(t, 1, len(dnsr)) {
@@ -238,7 +238,7 @@ func TestDNSEngine_MatchRequest_dnsRewrite(t *testing.T) {
 
 	t.Run("disable_one", func(t *testing.T) {
 		res, ok := dnsEngine.Match("disable_one")
-		assert.True(t, ok)
+		assert.False(t, ok)
 
 		var allowListCase *rules.NetworkRule
 		dnsr := res.DNSRewrites()
@@ -260,7 +260,7 @@ func TestDNSEngine_MatchRequest_dnsRewrite(t *testing.T) {
 
 	t.Run("disable_all", func(t *testing.T) {
 		res, ok := dnsEngine.Match("disable_all")
-		assert.True(t, ok)
+		assert.False(t, ok)
 
 		var allowListCase *rules.NetworkRule
 		dnsr := res.DNSRewrites()
@@ -279,7 +279,7 @@ func TestDNSEngine_MatchRequest_dnsRewrite(t *testing.T) {
 
 	t.Run("disable_all_alt_syntax", func(t *testing.T) {
 		res, ok := dnsEngine.Match("disable_all_alt_syntax")
-		assert.True(t, ok)
+		assert.False(t, ok)
 
 		var allowListCase *rules.NetworkRule
 		dnsr := res.DNSRewrites()
